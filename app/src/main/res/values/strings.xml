@@ -1,0 +1,15 @@
+<resources>
+    <string name="app_name">Address Book Cleaner</string>
+    <string name="manual_delete">Delete all contacts</string>
+    <string name="period_value">3000</string>
+    <string name="period_label">Period, ms</string>
+    <string name="start">Start</string>
+    <string name="in_label">IN:</string>
+    <string name="in_path">/storage/sdcard/android/data/abc/phones.txt</string>
+    <string name="viber_label">viber_data:</string>
+    <string name="viber_path">/data/data/com.viber.voip/databases/viber_data</string>
+    <string name="out_label">OUT:</string>
+    <string name="out_path">/storage/sdcard/android/data/abc</string>
+    <string name="error" />
+    <string name="test_add_contact">Test add contact</string>
+</resources>
