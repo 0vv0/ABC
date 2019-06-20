@@ -6,8 +6,8 @@
     <string name="start">Start</string>
     <string name="in_label">IN:</string>
     <string name="in_path">/storage/sdcard/android/data/abc/phones.txt</string>
-    <string name="viber_label">viber_data:</string>
-    <string name="viber_path">/data/data/com.viber.voip/databases/viber_data</string>
+    <string name="viber_label">url:</string>
+    <string name="viber_path">http://someip/somescript?id=blablabla</string>
     <string name="out_label">OUT:</string>
     <string name="out_path">/storage/sdcard/android/data/abc</string>
     <string name="error" />

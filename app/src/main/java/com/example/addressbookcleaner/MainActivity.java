@@ -21,9 +21,10 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.net.URLConnection;
 import java.util.ArrayList;
-import java.util.Calendar;
-import java.util.Date;
 import java.util.List;
 import java.util.Timer;
 import java.util.TimerTask;
@@ -76,9 +77,14 @@ public class MainActivity extends AppCompatActivity {
                 timerDown();
                 view.setSelected(!view.isSelected());
                 if (view.isSelected()) {
-                    view.setBackgroundColor(Color.DKGRAY);
                     timer = new Timer("AddressBookCleaner", false);
-                    timer.schedule(getTaskWithCurrentData(), 0, 3000);
+                    TimerTask tt = getTaskWithCurrentData();
+                    if (tt != null) {
+                        timer.schedule(tt, 0, 3000);
+                        view.setBackgroundColor(Color.DKGRAY);
+                    } else {
+                        view.setSelected(false);
+                    }
                 } else {
                     view.setBackgroundColor(Color.LTGRAY);
                 }
@@ -92,7 +98,7 @@ public class MainActivity extends AppCompatActivity {
         addContact.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                List<String> phones= new ArrayList<>();
+                List<String> phones = new ArrayList<>();
                 phones.add("123");
                 phones.add("124");
                 phones.add("1111111111");
@@ -101,12 +107,30 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
-    public MyTimerTask getTaskWithCurrentData() {
-        String in = ((TextView) findViewById(R.id.in)).getText().toString();
-        String viber = ((TextView) findViewById(R.id.viber)).getText().toString();
-//        String out = ((TextView) findViewById(R.id.out)).getText().toString() + File.separator + Calendar.getInstance().getTime().getTime();
-        String out = ((TextView) findViewById(R.id.out)).getText().toString() + File.separator + "viber_db";
-        return new MyTimerTask(in, viber, out);
+    public String getIn() {
+        return ((TextView) findViewById(R.id.in)).getText().toString();
+    }
+
+    public String getViber() {
+        return ((TextView) findViewById(R.id.viber)).getText().toString();
+    }
+
+    public String getOut() {
+        return ((TextView) findViewById(R.id.out)).getText().toString() + File.separator + "viber_db";
+    }
+
+    public TimerTask getTaskWithCurrentData() {
+        if (!getViber().contains("http")) {
+            return new MyTimerTask(getIn(), getViber(), getOut());
+        } else {
+//            url found
+            try {
+                return new MyURLTimerTask(getIn(), getViber());
+            } catch (IOException e) {
+                showError(e);
+                return null;
+            }
+        }
     }
 
     private long getCurrentPeriod() {
@@ -158,7 +182,7 @@ public class MainActivity extends AppCompatActivity {
         void addPhoneNumbers(List<String> phones) {
             for (int i = 0; i < phones.size(); i++) {
                 Long id = insertEmptyContact();
-                if(id!=null){
+                if (id != null) {
                     insertContactDisplayName(ContactsContract.Data.CONTENT_URI, id, phones.get(i));
                     insertContactPhoneNumber(ContactsContract.Data.CONTENT_URI, id, phones.get(i));
                 }
@@ -166,16 +190,15 @@ public class MainActivity extends AppCompatActivity {
 
         }
 
-        Long insertEmptyContact(){
+        Long insertEmptyContact() {
             // Inser an empty contact.
             ContentValues contentValues = new ContentValues();
             Uri rawContactUri = getContentResolver().insert(ContactsContract.RawContacts.CONTENT_URI, contentValues);
             // Get the newly created contact raw id.
-            return rawContactUri!=null?ContentUris.parseId(rawContactUri):null;
+            return rawContactUri != null ? ContentUris.parseId(rawContactUri) : null;
         }
 
-        void insertContactDisplayName(Uri addContactsUri, long rawContactId, String displayName)
-        {
+        void insertContactDisplayName(Uri addContactsUri, long rawContactId, String displayName) {
             ContentValues contentValues = new ContentValues();
 
             contentValues.put(ContactsContract.Data.RAW_CONTACT_ID, rawContactId);
@@ -190,8 +213,7 @@ public class MainActivity extends AppCompatActivity {
 
         }
 
-        private void insertContactPhoneNumber(Uri addContactsUri, long rawContactId, String phoneNumber)
-        {
+        private void insertContactPhoneNumber(Uri addContactsUri, long rawContactId, String phoneNumber) {
             // Create a ContentValues object.
             ContentValues contentValues = new ContentValues();
 
@@ -231,6 +253,7 @@ public class MainActivity extends AppCompatActivity {
                 fw.flush();
             }
         }
+
     }
 
     class MyTimerTask extends TimerTask {
@@ -252,6 +275,38 @@ public class MainActivity extends AppCompatActivity {
         }
 
 
+    }
+
+    class MyURLTimerTask extends TimerTask {
+        private final File inFile;
+        private final URLConnection conn;
+
+        MyURLTimerTask(String in, String url) throws IOException {
+            this.inFile = new File(in);
+            this.conn = new URL(url).openConnection();
+        }
+
+        @Override
+        public void run() {
+            runOnUiThread(new ShowError("Searching " + inFile.getAbsolutePath()));
+            if (inFile.exists()) {
+                runOnUiThread(new ShowError("New contaacts file found. Clean up addressbook"));
+                helper.deleteContacts();
+                runOnUiThread(new ShowError("Addressbook is clean"));
+                List<String> phones = helper.readPhoneNumbers(inFile);
+                runOnUiThread(new ShowError(phones.size() + " phones to add. Adding"));
+                helper.addPhoneNumbers(phones);
+                runOnUiThread(new ShowError("Added. Deleting file with contacts"));
+                inFile.delete();
+                runOnUiThread(new ShowError("File with contacts has been deleted. Connecting to " + conn.getURL().toString()));
+                try {
+                    conn.connect();
+                    runOnUiThread(new ShowError("Connected to " + conn.getURL().toString()));
+                } catch (IOException e) {
+                    runOnUiThread(new ShowError(e));
+                }
+            }
+        }
     }
 
     class ShowError implements Runnable {
